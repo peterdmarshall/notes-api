@@ -3,6 +3,7 @@ const protect = require('koa-protect');
 const bodyParser = require('koa-body');
 const notesRouter = require('./notesRouter');
 const mongoose = require('mongoose');
+const configData = require('./config.js');
 
 const app = new koa();
 app.use(bodyParser());
@@ -17,7 +18,7 @@ app.use(protect.koa.xss({
     loggerFunction: console.error
 }));
 
-mongoose.connect('mongodb+srv://Peter-Dev:204Mohawk@notesdb-0-t4he1.mongodb.net/test?retryWrites=true&w=majority', {
+mongoose.connect(configData.mongoURI, {
     useNewUrlParser: true
 });
 
