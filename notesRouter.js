@@ -1,9 +1,9 @@
 const router = require('koa-router');
 const noteModel = require('./models/note');
 const userModel = require('./models/users');
-const userHandler = require('./userHandler');
+const userHandler = require('./handlers/userHandler');
 const jwt = require('jsonwebtoken');
-const jwtHandler = require('./jwtHandler');
+const jwtHandler = require('./handlers/jwtHandler');
 
 const secret = process.env.JWT_SECRET || 'secret';
 
@@ -38,7 +38,7 @@ notesRouter
         // If they are correct then a JWT Auth token is returned
         var userData;
         await userModel.findOne({username: ctx.request.body.username, password: ctx.request.body.password},
-        function(err, user) {
+        (err, user) => {
             if(err || !user) {
                 ctx.response.status = 401;
             } else {
@@ -98,20 +98,65 @@ notesRouter
         }
         return next();
     })
-    .get('/note/:id', (ctx, next) => {
+    .get('/note/:id', async (ctx, next) => {
         // Find note with matching ID and return
         // Return resource not found if no matching ID
-        
+        const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
+        if(tokenPayload) {
+            const note = await noteModel.findOne({_id: ctx.params.id, ownerUID: tokenPayload.uid}, (err, note) => {
+                if(note && !err) {
+                    ctx.response.body = note;
+                    ctx.response.status = 200;
+                } else {
+                    ctx.response.status = 404;
+                    ctx.response.err;
+                }
+            });
+        } else {
+            ctx.response.status = 403;
+            ctx.response.err;
+        }
+        return next();
     })
-    .put('/note/:id', (ctx, next) => {
+    .put('/note/:id', async (ctx, next) => {
         // Find and update note with matching ID
         // Return resource not found if no matching ID
-        database.updateNote(id, ctx.request.body);
+        const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
+        const update = ctx.request.body;
+        if(tokenPayload) {
+            const note = await noteModel.findOneAndUpdate({_id: ctx.params.id, ownerUID: tokenPayload.uid}, update, {
+                new: true
+            });
+            if(note) {
+                ctx.response.body = note;
+            } else {
+                ctx.response.status = 400;
+                ctx.response.err;
+            }
+        } else {
+            ctx.response.status = 403;
+            ctx.response.err;
+        }
+        return next();
     })
-    .del('/note/:id', (ctx, next) => {
+    .del('/note/:id', async (ctx, next) => {
         // Find note with matching ID and delete
         // Return success or failure if no matching ID is found
-        database.deleteNote(id);
+        const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
+        if(tokenPayload) {
+            const deleted = await noteModel.findOneAndDelete({_id: ctx.params.id, ownerUID: tokenPayload.uid});
+            if(deleted) {
+                ctx.response.body = deleted;
+                ctx.response.status = 200;
+            } else {
+                ctx.response.status = 400;
+                ctx.response.err;
+            }
+        } else {
+            ctx.response.status = 403;
+            ctx.response.err;
+        }
+        return next();
     })
 
 module.exports = notesRouter.routes();

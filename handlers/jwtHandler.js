@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 
 async function getToken(ctx, userData, secret) {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         const token = jwt.sign(userData, secret);
         if(token) {
             resolve(ctx.response.body = token);
@@ -13,8 +13,8 @@ async function getToken(ctx, userData, secret) {
 }
 
 async function verifyToken(jwtToken, secret) {
-    return new Promise(function(resolve, reject) {
-        jwt.verify(jwtToken, secret, function(err, decoded) {
+    return new Promise((resolve, reject) => {
+        jwt.verify(jwtToken, secret, (err, decoded) => {
             if(decoded) {
                 resolve(decoded);
             } else {

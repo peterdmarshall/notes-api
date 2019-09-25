@@ -1,4 +1,4 @@
-const userModel = require('./models/users');
+const userModel = require('../models/users');
 const uuid = require('uuid/v1');
 
 function generateUID() {
