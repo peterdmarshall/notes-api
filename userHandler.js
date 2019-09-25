@@ -6,16 +6,11 @@ function generateUID() {
     return uuid();
 }
 
-function usernameIsUnique(username) {
+async function usernameIsUnique(username) {
     // Determine if username is already in use
-    var isUnique = false;
-    userModel.findOne({username: username}, function (err, user) {
-        if(!err && user) {
-            isUnique = true;
-        } else {
-            isUnique = false;
-        }
-    });
+    const exists = await userModel.exists({username: username});
+    console.log(!exists);
+    return !exists;
 }
 
 function checkPassword(password) {

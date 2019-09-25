@@ -3,6 +3,7 @@ const noteModel = require('./models/note');
 const userModel = require('./models/users');
 const userHandler = require('./userHandler');
 const jwt = require('jsonwebtoken');
+const jwtHandler = require('./jwtHandler');
 
 const secret = process.env.JWT_SECRET || 'secret';
 
@@ -15,45 +16,53 @@ notesRouter
         // Accepts a username, password, and other info
         // Creates a new user
         var userData = ctx.request.body;
-        if(userHandler.usernameIsUnique && userHandler.checkPassword) {
-            userData.uid = userHandler.generateUID;
-        }
-        const user = new userModel(userData);
+        
+        if(await userHandler.usernameIsUnique(userData.username) && await userHandler.checkPassword(userData.password)) {
+            userData.uid = await userHandler.generateUID();
+            const user = new userModel(userData);
 
-        try {
-            await user.save();
-            ctx.response.status = 201;
-        } catch (err) {
-            ctx.response.status = 400;
-            ctx.response.err;
+            try {
+                await user.save();
+                ctx.response.status = 201;
+            } catch (err) {
+                ctx.response.status = 400;
+                ctx.response.err;
+            }
+        } else {
+            ctx.response.status = 403;
         }
+        return next();
     })
     .post('/users/authenticate', async (ctx, next) => {
         // Accepts requests containing username and password in the body
         // If they are correct then a JWT Auth token is returned
-        const user = await userModel.find({username: ctx.body.username, password: ctx.body.password});
-        
-        try {
-            const payload = {
-                username: user.username,
-                id: user.uid,
-                exp: Date.UTC
-            };
-            const token = jwt.sign(payload, secret);
-            ctx.response.body = token;
-        } catch (err) {
-            ctx.response.status = 401;
-            ctx.response.err;
-        }
-        
+        var userData;
+        await userModel.findOne({username: ctx.request.body.username, password: ctx.request.body.password},
+        function(err, user) {
+            if(err || !user) {
+                ctx.response.status = 401;
+            } else {
+                userData = user;
+            }
+        }).lean();
+        delete userData.firstName;
+        delete userData.lastName;
+        delete userData.password;
+        delete userData._id;
+        delete userData.__v;
+        console.log(userData);
+        await jwtHandler.getToken(ctx, userData, secret);
+        return next();
     })
     .get('/', (ctx, next) => {
         ctx.body = 'Notes API';
         return next();
     })
     .get('/notes', async (ctx, next) => {
-        // Return all notes
-        const notes = await noteModel.find({});
+        // Return all notes for the user
+        // Verify and decode JWT token
+        const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
+        const notes = await noteModel.find({ownerUID: tokenPayload.uid});
 
         try {
             ctx.response.body = notes;
@@ -66,16 +75,28 @@ notesRouter
     })
     .post('/note', async (ctx, next) => {
         // Add new note to database and give it an ID
-        const note = new noteModel(ctx.request.body);
-        
-        try {
-            await note.save();
-            ctx.response.body = note;
-            ctx.response.status = 201;
-        } catch (err) {
-            ctx.response.status = 500;
+        // Verify and decode JWT token
+        var noteData = ctx.request.body;
+        const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
+        if(tokenPayload) {
+            noteData.ownerUID = tokenPayload.uid;
+
+            console.log(noteData);
+            const note = new noteModel(noteData);
+            
+            try {
+                await note.save();
+                ctx.response.body = note;
+                ctx.response.status = 201;
+            } catch (err) {
+                ctx.response.status = 401;
+                ctx.response.err;
+            }
+        } else {
+            ctx.response.status = 401;
             ctx.response.err;
         }
+        return next();
     })
     .get('/note/:id', (ctx, next) => {
         // Find note with matching ID and return

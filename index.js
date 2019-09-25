@@ -19,7 +19,7 @@ app.use(protect.koa.xss({
 }));
 
 mongoose.connect(configData.mongoURI, {
-    useNewUrlParser: true
+    useNewUrlParser: true, useUnifiedTopology: true
 });
 
 app.use(notesRouter);
