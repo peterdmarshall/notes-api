@@ -36,6 +36,10 @@ notesRouter
     .post('/users/authenticate', async (ctx, next) => {
         // Accepts requests containing username and password in the body
         // If they are correct then a JWT Auth token is returned
+        // {
+        //    "username": "USERNAME",
+        //    "password": "PASSWORD"
+        // }
         var userData;
         await userModel.findOne({username: ctx.request.body.username, password: ctx.request.body.password},
         (err, user) => {
@@ -61,6 +65,7 @@ notesRouter
     .get('/notes', async (ctx, next) => {
         // Return all notes for the user
         // Verify and decode JWT token
+        // Header: Authentication=token
         const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
         const notes = await noteModel.find({ownerUID: tokenPayload.uid});
 
@@ -76,6 +81,10 @@ notesRouter
     .post('/note', async (ctx, next) => {
         // Add new note to database and give it an ID
         // Verify and decode JWT token
+        // {
+        //    "content": "NOTE_BODY_TEXT",
+        //    "title": "NOTE_TITLE"
+        // }
         var noteData = ctx.request.body;
         const tokenPayload = await jwtHandler.verifyToken(ctx.request.header.authorization, secret);
         if(tokenPayload) {

@@ -1,0 +1,16 @@
+version: 2
+jobs: 
+  build:
+    machine: true
+    environment:
+    steps:
+      - checkout
+      - run: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+      - run: docker build -t notes-api ./
+      - run: docker images
+      - run: docker tag notes-api $DOCKER_USERNAME/notes-api
+      - run: docker push $DOCKER_USERNAME/notes-api
+      - run: 
+        name: Deploy to Droplet via Docker
+        command: |
+          ssh root@petermarshall.dev 'bash -s' < deploy.sh 
