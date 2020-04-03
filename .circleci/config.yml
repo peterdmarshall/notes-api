@@ -10,7 +10,4 @@ jobs:
       - run: docker images
       - run: docker tag notes-api $DOCKER_USERNAME/notes-api
       - run: docker push $DOCKER_USERNAME/notes-api
-      - run: 
-          name: Deploy to Droplet via Docker
-          command: |
-            ssh root@petermarshall.dev 'bash -s' < deploy.sh 
+      - run: bash deploy.sh
