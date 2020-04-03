@@ -1,5 +1,5 @@
 #!/bin/bash
-ssh -T tunneluser@111.222.333.444 <<EOI
+ssh -T root@petermarshall.dev <<EOI
 
 docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
 docker pull ${DOCKER_USERNAME}/notes-api:latest
